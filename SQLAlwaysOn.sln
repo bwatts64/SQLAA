@@ -1,0 +1,25 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 15
+VisualStudioVersion = 15.0.28307.136
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{151D2E53-A2C4-4D7D-83FE-D05416EBD58E}") = "SQLAlwaysOn", "SQLAlwaysOn\SQLAlwaysOn.deployproj", "{D57616AB-C415-44C9-A5DA-26CFF39775BE}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{D57616AB-C415-44C9-A5DA-26CFF39775BE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D57616AB-C415-44C9-A5DA-26CFF39775BE}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D57616AB-C415-44C9-A5DA-26CFF39775BE}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D57616AB-C415-44C9-A5DA-26CFF39775BE}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {5E0BBCE6-5959-44AE-B9DE-9AB75A1DB5A9}
+	EndGlobalSection
+EndGlobal

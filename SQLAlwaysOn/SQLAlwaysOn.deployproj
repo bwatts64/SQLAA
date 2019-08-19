@@ -1,0 +1,43 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|AnyCPU">
+      <Configuration>Debug</Configuration>
+      <Platform>AnyCPU</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|AnyCPU">
+      <Configuration>Release</Configuration>
+      <Platform>AnyCPU</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>d57616ab-c415-44c9-a5da-26cff39775be</ProjectGuid>
+  </PropertyGroup>
+  <PropertyGroup>
+    <PrepareForBuildDependsOn>
+    </PrepareForBuildDependsOn>
+  </PropertyGroup>
+  <Import Condition=" Exists('Deployment.targets') " Project="Deployment.targets" />
+  <Import Project="$(MSBuildToolsPath)\Microsoft.Common.targets" />
+  <!-- vertag<:>start tokens<:>maj.min -->
+  <Import Condition=" Exists('$(MSBuildExtensionsPath)\Microsoft\VisualStudio\v$(VisualStudioVersion)\Deployment\1.1\DeploymentProject.targets') " Project="$(MSBuildExtensionsPath)\Microsoft\VisualStudio\v$(VisualStudioVersion)\Deployment\1.1\DeploymentProject.targets" />
+  <!-- vertag<:>end -->
+  <ItemGroup>
+    <Content Include="azuredeploy.parameters.json" />
+    <Content Include="azuredeploy.json" />
+    <None Include="Deployment.targets">
+      <Visible>False</Visible>
+    </None>
+    <Content Include="Deploy-AzureResourceGroup.ps1" />
+    <Content Include="nestedtemplates\deploy-sql-cluster.json" />
+    <Content Include="nestedtemplates\newVM.json" />
+    <Content Include="nestedtemplates\lbBEPool.json" />
+    <Content Include="nestedtemplates\getIpAddress.json" />
+    <Content Include="nestedtemplates\albBEPool.json" />
+    <Content Include="dsc\config-sqlao.ps1.zip" />
+    <Content Include="dsc\prep-sqlao.ps1.zip" />
+    <Content Include="README.md" />
+    <Content Include="LICENSE" />
+  </ItemGroup>
+  <Target Name="GetReferenceAssemblyPaths" />
+</Project>
