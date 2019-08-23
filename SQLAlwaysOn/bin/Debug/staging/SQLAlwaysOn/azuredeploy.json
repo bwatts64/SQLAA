@@ -172,7 +172,6 @@
     "vnetRef": "[resourceId(parameters('existingVirtualNetworkRGName'),'Microsoft.Network/virtualNetworks',parameters('existingVirtualNetworkName'))]",
     "deploySqlClusterTemplateURL": "[concat(variables('blobUri'),'/deploy-sql-cluster.json',variables('blobSAS'))]",
     "deploySqlCluster": "deploySqlCluster"
-
   },
   "resources": [
     {

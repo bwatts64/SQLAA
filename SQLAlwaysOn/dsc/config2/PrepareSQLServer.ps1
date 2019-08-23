@@ -14,7 +14,7 @@ configuration SQLServerPrepareDsc
         [Parameter(Mandatory)]
         [Int]$vmCount,
 
-	[String]$DomainNetbiosName=(Get-NetBIOSName -DomainName $DomainName),
+	    [String]$DomainNetbiosName=(Get-NetBIOSName -DomainName $DomainName),
 
         [Parameter(Mandatory)]
         [System.Management.Automation.PSCredential]$Admincreds,
@@ -49,7 +49,7 @@ configuration SQLServerPrepareDsc
         [string]$Edition
     )
 
-    Import-DscResource -ModuleName xComputerManagement, xNetworking, xActiveDirectory, xStorage, xFailoverCluster, SqlServer, SqlServerDsc, StorageDSC
+    Import-DscResource -ModuleName xComputerManagement, xNetworking, xActiveDirectory, xStorage, xFailoverCluster, SqlServer, SqlServerDsc, StorageDSC, SmbShare, xSMBShare
     [System.Management.Automation.PSCredential]$DomainCreds = New-Object System.Management.Automation.PSCredential ("${DomainNetbiosName}\$($Admincreds.UserName)", $Admincreds.Password)
     [System.Management.Automation.PSCredential]$DomainFQDNCreds = New-Object System.Management.Automation.PSCredential ("${DomainName}\$($Admincreds.UserName)", $Admincreds.Password)
     [System.Management.Automation.PSCredential]$SQLCreds = New-Object System.Management.Automation.PSCredential ("${DomainNetbiosName}\$($SQLServicecreds.UserName)", $SQLServicecreds.Password)
@@ -117,7 +117,7 @@ configuration SQLServerPrepareDsc
             Ensure = "Present"
             DependsOn = "[WindowsFeature]FailoverClusterTools"
         }
-
+     
         WindowsFeature FCPSCMD
         {
             Ensure    = 'Present'
@@ -131,6 +131,14 @@ configuration SQLServerPrepareDsc
             Ensure = "Present"
         }
 
+        xComputer DomainJoin
+        {
+            Name = $env:COMPUTERNAME
+            DomainName = $DomainName
+            Credential = $DomainCreds
+        }
+
+
         <#TODO: Add user for running SQL server.
         xADUser SvcUser
         {
@@ -138,14 +146,7 @@ configuration SQLServerPrepareDsc
         }
         #>
 
-	xComputer DomainJoin
-        {
-            Name = $env:COMPUTERNAME
-            DomainName = $DomainName
-            Credential = $DomainCreds
-        }
-
-        Script New-ConfigurationFile {
+	    Script New-ConfigurationFile {
             SetScript = {
                 $bloburi=$using:bloburi
                 $blobSAS=$using:blobSAS
@@ -230,7 +231,7 @@ configuration SQLServerPrepareDsc
             PsDscRunAsCredential  = $DomainCreds
         }
 
-	Script ResetSpns
+        Script ResetSpns
         {
             GetScript = { 
                 return @{ 'Result' = $true }
@@ -267,36 +268,16 @@ configuration SQLServerPrepareDsc
         }
 
         if ($ClusterOwnerNode -eq $env:COMPUTERNAME) { 
-            <#
-            Script CreateCluster
+            SqlDatabase Create_Database
             {
-                GetScript = { 
-                    return @{ 'Result' = $true }
-                }
-                SetScript = {
-                    $targetNodeName = $env:COMPUTERNAME
-                    New-Cluster -Name $using:ClusterNameDummy -Node $targetNodeName -StaticAddress $ipdummy
-                }
-                TestScript = {
-                    $targetNodeName = $env:COMPUTERNAME
-                    $(Get-ClusterNode -Cluster $using:ClusterOwnerNode).Name -contains $targetNodeName
-                }
-                DependsOn = "[Script]ResetSpns"
+                Ensure       = 'Present'
+                ServerName   = $env:COMPUTERNAME
+                InstanceName = $sqlInstanceName
+                Name         = 'TestDB'
+
                 PsDscRunAsCredential = $DomainCreds
             }
-            #>
-
-            <#
-            xCluster CreateCluster
-            {
-                Name                          = $ClusterNameDummy
-                StaticIPAddress               = $ipdummy/24"
-                DomainAdministratorCredential = $DomainCreds
-
-                DependsOn                     = "[WindowsFeature]FCPSCMD","[Script]ResetSpns"
-            }
-            #>
-
+            
             xCluster CreateCluster
             {
                 Name                          = $ClusterNameDummy
@@ -349,7 +330,45 @@ configuration SQLServerPrepareDsc
                 DependsOn            = "[SqlAG]CreateAG"
             }
 
-            
+            SqlWaitForAG WaitForAG
+              {
+                  Name                 = $ClusterName
+                  RetryIntervalSec     = 20
+                  RetryCount           = 30
+                  PsDscRunAsCredential = $DomainCreds
+                  DependsOn                  = "[SqlServerEndpoint]HADREndpoint"
+              }
+
+            File BackupDirectory
+            {
+                Ensure = "Present" 
+                Type = "Directory" 
+                DestinationPath = "F:\Backup"    
+            }
+
+
+            xSMBShare DBBackupShare
+            {
+                Name = "DBBackup"
+                Path = "F:\Backup"
+                Ensure = "Present"
+                FullAccess = $DomainCreds.UserName
+                Description = "Backup share for SQL Server"
+                DependsOn = "[File]BackupDirectory"
+            }
+
+            SqlAGDatabase AddDatabaseToAG
+            {
+                AvailabilityGroupName   = $ClusterName
+                BackupPath              = "\\" + $env:COMPUTERNAME + "\DBBackup"
+                DatabaseName            = 'TestDB'
+                InstanceName            = $sqlInstanceName
+                ServerName              = $env:COMPUTERNAME
+                Ensure                  = 'Present'
+                ProcessOnlyOnActiveNode = $true
+                PsDscRunAsCredential    = $DomainCreds
+                DependsOn               = "[xSMBShare]DBBackupShare"
+            }            
 
             Script SetProbePort
             {
@@ -443,11 +462,12 @@ configuration SQLServerPrepareDsc
               }
       
                 # Add the availability group replica to the availability group
-                <#
+                
+                $computerName = $env:COMPUTERNAME
                 SqlAGReplica AddReplica
                 {
                     Ensure                     = 'Present'
-                    Name                       = $env:COMPUTERNAME
+                    Name                       = "$computerName\$sqlInstanceName"
                     AvailabilityGroupName      = $ClusterName
                     ServerName                 = $env:COMPUTERNAME
                     InstanceName               = $sqlInstanceName
@@ -458,33 +478,6 @@ configuration SQLServerPrepareDsc
                     FailoverMode         = "Automatic"
                     DependsOn            = "[SqlWaitForAG]WaitForAG"     
                 }
-                #>
-
-                Script "AddReplica"
-                {
-                    GetScript = { 
-                        return @{ 'Result' = $true }
-                    }
-                    SetScript = {
-                        $PrimaryServer = $using:ClusterOwnerNode
-                        $sqlInstanceName = $using:sqlInstanceName
-                        $ClusterName = $using:ClusterName
-                        $agPath = "SQLSERVER:\Sql\$PrimaryServer\$sqlInstanceName\AvailabilityGroups\$ClusterName"  
-                        $endpointURL = "TCP://$PrimaryServerName.domain.com:5022"  
-                        $failoverMode = "Automatic"  
-                        $availabilityMode = "SynchronousCommit"  
-                        $secondaryReadMode = "AllowAllConnections"  
-
-                        $server = $env:COMPUTERNAME
-                        New-SqlAvailabilityReplica -Name "$server\$sqlInstanceName" -EndpointUrl $endpointURL -FailoverMode $failoverMode -AvailabilityMode $availabilityMode -ConnectionModeInSecondaryRole $secondaryReadMode -Path $agPath
-                    }
-                    TestScript = {
-                        $False
-                    }
-                    DependsOn = "[SqlWaitForAG]WaitForAG"
-                    PsDscRunAsCredential = $DomainCreds
-                }
-               
         }
 
 
