@@ -79,12 +79,6 @@ configuration SQLServerPrepareDsc
 
     Node localhost
     {
-        Disk DataVolume
-        {
-             DiskId = 2
-             DriveLetter = 'F'
-             FSLabel = 'Data'
-        }
 		
         WindowsFeature 'NetFramework35'
         {
@@ -131,14 +125,7 @@ configuration SQLServerPrepareDsc
             Ensure = "Present"
         }
 
-        xComputer DomainJoin
-        {
-            Name = $env:COMPUTERNAME
-            DomainName = $DomainName
-            Credential = $DomainCreds
-        }
-
-
+        
         <#TODO: Add user for running SQL server.
         xADUser SvcUser
         {
@@ -184,7 +171,6 @@ configuration SQLServerPrepareDsc
                 Test-Path "c:\SQLConfig\$msiFileName" 
             }
             GetScript = { }
-            DependsOn = "[xComputer]DomainJoin"
         }
 
         if($Edition -eq 'Enterprise (x64)') {
