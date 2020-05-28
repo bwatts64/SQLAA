@@ -19,7 +19,6 @@ $vmss = Get-AzVmss `
                 -VMScaleSetName "$ScaleSetName"
 
 # Add the Desired State Configuration extension to install IIS and configure basic website
-$vmss = Add-AzVmssExtension `
     -VirtualMachineScaleSet $vmss `
     -Publisher Microsoft.Powershell `
     -Type DSC `
@@ -29,6 +28,7 @@ $vmss = Add-AzVmssExtension `
 
 # Update the scale set and apply the Desired State Configuration extension to the VM instances
 Update-AzVmss `
-    -ResourceGroupName "myResourceGroup" `
-    -Name "myScaleSet"  `
+    -ResourceGroupName "$RGName" `
+    -Name "$ScaleSetName"  `
+$vmss = Add-AzVmssExtension `
     -VirtualMachineScaleSet $vmss
